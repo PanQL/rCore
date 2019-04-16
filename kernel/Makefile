@@ -241,7 +241,7 @@ hostcc := gcc
 all: kernel
 
 clean:
-	@cargo clean
+	@rm -rf target
 	@cd $(bootloader_dir) && make clean
 	@cd $(user_dir) && make clean
 
