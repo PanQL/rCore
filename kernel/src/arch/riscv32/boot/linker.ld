@@ -6,7 +6,7 @@
 OUTPUT_ARCH(riscv)
 ENTRY(_start)
 
-BASE_ADDRESS = 0xC0020000;
+BASE_ADDRESS = 0xC0400000;
 
 SECTIONS
 {
@@ -22,6 +22,9 @@ SECTIONS
     .text : {
         stext = .;
         *(.text.entry)
+        _copy_user_start = .;
+        *(.text.copy_user)
+        _copy_user_end = .;
         *(.text .text.*)
         . = ALIGN(4K);
         etext = .;

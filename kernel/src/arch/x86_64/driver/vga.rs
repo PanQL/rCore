@@ -6,7 +6,7 @@ use spin::Mutex;
 use volatile::Volatile;
 use x86_64::instructions::port::Port;
 
-use crate::consts::KERNEL_OFFSET;
+use crate::memory::phys_to_virt;
 use crate::util::color::ConsoleColor;
 use crate::util::escape_parser::{EscapeParser, CSI};
 
@@ -99,10 +99,9 @@ impl VgaBuffer {
 }
 
 lazy_static! {
-    pub static ref VGA_WRITER: Mutex<VgaWriter> = Mutex::new(
-        // VGA virtual address is specified at bootloader
-        VgaWriter::new(unsafe{ &mut *((KERNEL_OFFSET + 0xf0000000) as *mut VgaBuffer) })
-    );
+    pub static ref VGA_WRITER: Mutex<VgaWriter> = Mutex::new(VgaWriter::new(unsafe {
+        &mut *((phys_to_virt(0xb8000)) as *mut VgaBuffer)
+    }));
 }
 
 pub struct VgaWriter {
@@ -206,11 +205,11 @@ impl AsciiConsole for VgaWriter {
             CSI::CursorMove(dx, dy) => {
                 let x = (self.pos.row.0 as i8 + dx).max(0) as u8;
                 let y = (self.pos.col.0 as i8 + dy).max(0) as u8;
-                self.set_pos(Position::new(Row(x), Col(y)));
+                self.set_pos(Position::new(Row(x), Col(y))).unwrap();
             }
             CSI::CursorMoveLine(dx) => {
                 let x = (self.pos.row.0 as i8 + dx).max(0) as u8;
-                self.set_pos(Position::new(Row(x), Col(0)));
+                self.set_pos(Position::new(Row(x), Col(0))).unwrap();
             }
             _ => {}
         }

@@ -1,8 +1,6 @@
 //! Raspberry PI 3 Model B/B+
 
-use alloc::string::String;
 use bcm2837::atags::Atags;
-use once::*;
 
 #[path = "../../../../drivers/gpu/fb.rs"]
 pub mod fb;
@@ -11,17 +9,14 @@ pub mod mailbox;
 pub mod serial;
 pub mod timer;
 
-use fb::{ColorConfig, FramebufferInfo, FramebufferResult};
+use fb::{ColorConfig, FramebufferResult};
 
 pub const IO_REMAP_BASE: usize = bcm2837::consts::IO_BASE;
 pub const IO_REMAP_END: usize = bcm2837::consts::KERNEL_OFFSET + 0x4000_1000;
 
 /// Initialize serial port before other initializations.
 pub fn init_serial_early() {
-    assert_has_not_been_called!("board::init must be called only once");
-
     serial::init();
-
     println!("Hello Raspberry Pi!");
 }
 
@@ -71,9 +66,8 @@ pub fn probe_fb_info(width: u32, height: u32, depth: u32) -> FramebufferResult {
         ))?;
     }
 
-    use crate::arch::memory;
     let paddr = info.bus_addr & !0xC0000000;
-    let vaddr = memory::ioremap(paddr as usize, info.screen_size as usize, "fb");
+    let vaddr = crate::memory::phys_to_virt(paddr as usize);
     if vaddr == 0 {
         Err(format!(
             "cannot remap memory range [{:#x?}..{:#x?}]",
@@ -82,5 +76,10 @@ pub fn probe_fb_info(width: u32, height: u32, depth: u32) -> FramebufferResult {
         ))?;
     }
 
-    Ok((info, fb::ColorConfig::BGRA8888, vaddr))
+    let color_config = match info.depth {
+        16 => ColorConfig::RGB565,
+        32 => ColorConfig::BGRA8888,
+        _ => Err(format!("unsupported color depth {}", info.depth))?,
+    };
+    Ok((info, color_config, vaddr))
 }

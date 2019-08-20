@@ -5,8 +5,10 @@ use mips::tlb;
 #[derive(Clone)]
 #[repr(C)]
 pub struct TrapFrame {
-    /// unused 16 bytes
-    pub unused: [usize; 4],
+    /// Non-zero if the kernel stack is not 16-byte-aligned
+    pub unaligned_kstack: usize,
+    /// unused 12 bytes
+    pub unused: [usize; 3],
     /// CP0 status register
     pub status: cp0::status::Status,
     /// CP0 cause register
@@ -50,8 +52,42 @@ pub struct TrapFrame {
     pub sp: usize,
     pub fp: usize,
     pub ra: usize,
-    /// Reserve space for hartid
-    pub _hartid: usize,
+    /// Floating-point registers (contains garbage if no FP support present)
+    pub f0: usize,
+    pub f1: usize,
+    pub f2: usize,
+    pub f3: usize,
+    pub f4: usize,
+    pub f5: usize,
+    pub f6: usize,
+    pub f7: usize,
+    pub f8: usize,
+    pub f9: usize,
+    pub f10: usize,
+    pub f11: usize,
+    pub f12: usize,
+    pub f13: usize,
+    pub f14: usize,
+    pub f15: usize,
+    pub f16: usize,
+    pub f17: usize,
+    pub f18: usize,
+    pub f19: usize,
+    pub f20: usize,
+    pub f21: usize,
+    pub f22: usize,
+    pub f23: usize,
+    pub f24: usize,
+    pub f25: usize,
+    pub f26: usize,
+    pub f27: usize,
+    pub f28: usize,
+    pub f29: usize,
+    pub f30: usize,
+    pub f31: usize,
+    /// Reserved
+    pub reserved: usize,
+    pub __padding: [usize; 2],
 }
 
 impl TrapFrame {
@@ -76,7 +112,7 @@ impl TrapFrame {
     ///
     /// The new thread starts at `entry_addr`.
     /// The stack pointer will be set to `sp`.
-    fn new_user_thread(entry_addr: usize, sp: usize) -> Self {
+    pub fn new_user_thread(entry_addr: usize, sp: usize) -> Self {
         use core::mem::zeroed;
         let mut tf: Self = unsafe { zeroed() };
         tf.sp = sp;
@@ -97,6 +133,37 @@ impl Debug for TrapFrame {
             .field("epc", &self.epc)
             .field("cause", &self.cause.bits)
             .field("vaddr", &self.vaddr)
+            .field("at", &self.at)
+            .field("v0", &self.v0)
+            .field("v1", &self.v1)
+            .field("a0", &self.a0)
+            .field("a1", &self.a1)
+            .field("a2", &self.a2)
+            .field("a3", &self.a3)
+            .field("t0", &self.t0)
+            .field("t1", &self.t1)
+            .field("t2", &self.t2)
+            .field("t3", &self.t3)
+            .field("t4", &self.t4)
+            .field("t5", &self.t5)
+            .field("t6", &self.t6)
+            .field("t7", &self.t7)
+            .field("s0", &self.s0)
+            .field("s1", &self.s1)
+            .field("s2", &self.s2)
+            .field("s3", &self.s3)
+            .field("s4", &self.s4)
+            .field("s5", &self.s5)
+            .field("s6", &self.s6)
+            .field("s7", &self.s7)
+            .field("t8", &self.t8)
+            .field("t9", &self.t9)
+            .field("k0", &self.k0)
+            .field("k1", &self.k1)
+            .field("gp", &self.gp)
+            .field("sp", &self.sp)
+            .field("fp", &self.fp)
+            .field("ra", &self.ra)
             .finish()
     }
 }
@@ -120,6 +187,7 @@ impl InitStack {
 
 extern "C" {
     fn trap_return();
+    fn _cur_tls();
 }
 
 /// Saved registers for kernel context switches.
@@ -130,17 +198,22 @@ struct ContextData {
     ra: usize,
     /// Page table token
     satp: usize,
-    /// Callee-saved registers
+    /// s[0] = TLS
+    /// s[1] = reserved
+    /// s[2..11] = Callee-saved registers
     s: [usize; 12],
+    __padding: [usize; 2],
 }
 
 impl ContextData {
-    fn new(satp: usize) -> Self {
-        ContextData {
+    fn new(satp: usize, tls: usize) -> Self {
+        let mut context = ContextData {
             ra: trap_return as usize,
-            satp,
+            satp: satp,
             ..ContextData::default()
-        }
+        };
+        context.s[0] = tls;
+        context
     }
 }
 
@@ -191,7 +264,7 @@ impl Context {
         );
 
         InitStack {
-            context: ContextData::new(satp),
+            context: ContextData::new(satp, 0),
             tf: TrapFrame::new_kernel_thread(entry, arg, kstack_top),
         }
         .push_at(kstack_top)
@@ -206,7 +279,6 @@ impl Context {
         entry_addr: usize,
         ustack_top: usize,
         kstack_top: usize,
-        _is32: bool,
         satp: usize,
     ) -> Self {
         info!(
@@ -215,7 +287,7 @@ impl Context {
         );
 
         InitStack {
-            context: ContextData::new(satp),
+            context: ContextData::new(satp, 0),
             tf: TrapFrame::new_user_thread(entry_addr, ustack_top),
         }
         .push_at(kstack_top)
@@ -227,8 +299,9 @@ impl Context {
     /// The SATP register will be set to `satp`.
     /// All the other registers are same as the original.
     pub unsafe fn new_fork(tf: &TrapFrame, kstack_top: usize, satp: usize) -> Self {
+        let tls = unsafe { *(_cur_tls as *const usize) };
         InitStack {
-            context: ContextData::new(satp),
+            context: ContextData::new(satp, tls),
             tf: {
                 let mut tf = tf.clone();
                 // fork function's ret value, the new process is 0
@@ -254,20 +327,14 @@ impl Context {
         tls: usize,
     ) -> Self {
         InitStack {
-            context: ContextData::new(satp),
+            context: ContextData::new(satp, tls),
             tf: {
                 let mut tf = tf.clone();
                 tf.sp = ustack_top; // sp
-                tf.v1 = tls;
                 tf.v0 = 0; // return value
                 tf
             },
         }
         .push_at(kstack_top)
-    }
-
-    /// Used for getting the init TrapFrame of a new user context in `sys_exec`.
-    pub unsafe fn get_init_tf(&self) -> TrapFrame {
-        (*(self.sp as *const InitStack)).tf.clone()
     }
 }

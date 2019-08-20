@@ -5,6 +5,7 @@ use core::any::Any;
 
 use rcore_fs::vfs::*;
 
+use super::ioctl::*;
 use crate::sync::Condvar;
 use crate::sync::SpinNoIrqLock as Mutex;
 
@@ -20,18 +21,27 @@ impl Stdin {
         self.pushed.notify_one();
     }
     pub fn pop(&self) -> char {
-        // QEMU v3.0 don't support M-mode external interrupt (bug?)
-        // So we have to use polling.
+        #[cfg(feature = "board_k210")]
         loop {
-            let ret = self.buf.lock().pop_front();
-            match ret {
+            // polling
+            let c = crate::arch::io::getchar();
+            if c != '\0' {
+                return c;
+            }
+        }
+        #[cfg(not(feature = "board_k210"))]
+        loop {
+            let mut buf_lock = self.buf.lock();
+            match buf_lock.pop_front() {
                 Some(c) => return c,
-                None => self.pushed._wait(),
+                None => {
+                    self.pushed.wait(buf_lock);
+                }
             }
         }
     }
     pub fn can_read(&self) -> bool {
-        self.buf.lock().len() > 0
+        return self.buf.lock().len() > 0;
     }
 }
 
@@ -47,6 +57,7 @@ lazy_static! {
 macro_rules! impl_inode {
     () => {
         fn metadata(&self) -> Result<Metadata> { Err(FsError::NotSupported) }
+        fn set_metadata(&self, _metadata: &Metadata) -> Result<()> { Ok(()) }
         fn sync_all(&self) -> Result<()> { Ok(()) }
         fn sync_data(&self) -> Result<()> { Ok(()) }
         fn resize(&self, _len: usize) -> Result<()> { Err(FsError::NotSupported) }
@@ -56,19 +67,46 @@ macro_rules! impl_inode {
         fn move_(&self, _old_name: &str, _target: &Arc<INode>, _new_name: &str) -> Result<()> { Err(FsError::NotDir) }
         fn find(&self, _name: &str) -> Result<Arc<INode>> { Err(FsError::NotDir) }
         fn get_entry(&self, _id: usize) -> Result<String> { Err(FsError::NotDir) }
+        fn io_control(&self, cmd: u32, data: usize) -> Result<()> {
+            match cmd as usize {
+                TCGETS | TIOCGWINSZ | TIOCSPGRP => {
+                    // pretend to be tty
+                    Ok(())
+                },
+                TIOCGPGRP => {
+                    // pretend to be have a tty process group
+                    // TODO: verify pointer
+                    unsafe {
+                        *(data as *mut u32) = 0
+                    };
+                    Ok(())
+                }
+                _ => Err(FsError::NotSupported)
+            }
+        }
         fn fs(&self) -> Arc<FileSystem> { unimplemented!() }
         fn as_any_ref(&self) -> &Any { self }
-        fn chmod(&self, _mode: u16) -> Result<()> { Ok(()) }
     };
 }
 
 impl INode for Stdin {
-    fn read_at(&self, _offset: usize, buf: &mut [u8]) -> Result<usize> {
-        buf[0] = self.pop() as u8;
-        Ok(1)
+    fn read_at(&self, offset: usize, buf: &mut [u8]) -> Result<usize> {
+        if self.can_read() {
+            buf[0] = self.pop() as u8;
+            Ok(1)
+        } else {
+            Err(FsError::Again)
+        }
     }
     fn write_at(&self, _offset: usize, _buf: &[u8]) -> Result<usize> {
         unimplemented!()
+    }
+    fn poll(&self) -> Result<PollStatus> {
+        Ok(PollStatus {
+            read: self.can_read(),
+            write: false,
+            error: false,
+        })
     }
     impl_inode!();
 }
@@ -83,6 +121,13 @@ impl INode for Stdout {
         let s = unsafe { str::from_utf8_unchecked(buf) };
         print!("{}", s);
         Ok(buf.len())
+    }
+    fn poll(&self) -> Result<PollStatus> {
+        Ok(PollStatus {
+            read: false,
+            write: true,
+            error: false,
+        })
     }
     impl_inode!();
 }

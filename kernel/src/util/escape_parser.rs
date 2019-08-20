@@ -1,12 +1,14 @@
 //! ANSI escape sequences parser
 //! (ref: https://en.wikipedia.org/wiki/ANSI_escape_code)
 
+#![allow(dead_code)]
+
 use super::color::ConsoleColor;
 use heapless::consts::U8;
 use heapless::Vec;
 
-#[repr(C)]
 #[derive(Debug, Clone, Copy, PartialEq)]
+#[repr(align(4))]
 pub struct CharacterAttribute {
     /// foreground color
     pub foreground: ConsoleColor,
@@ -154,8 +156,12 @@ impl EscapeParser {
                     }
                     let csi = CSI::new(byte, &self.params);
                     if csi == CSI::SGR {
-                        for &param in self.params.iter() {
-                            self.char_attr.apply_sgr(param);
+                        if self.params.is_empty() {
+                            self.char_attr.apply_sgr(0);
+                        } else {
+                            for &param in self.params.iter() {
+                                self.char_attr.apply_sgr(param);
+                            }
                         }
                     }
                     self.status = ParseStatus::Text;

@@ -1,6 +1,7 @@
 build
 target
 /kernel/src/arch/x86_64/interrupt/vector.asm
+/kernel/src/arch/mipsel/boot/linker.ld
 *.gen.s
 *.dtb
 
@@ -14,4 +15,8 @@ Cargo.lock
 # for eclipse
 .project
 
+# for vscode
 .vscode
+
+# for vim
+*.swp

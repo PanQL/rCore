@@ -6,6 +6,9 @@
 #![feature(optin_builtin_traits)]
 #![feature(panic_info_message)]
 #![feature(global_asm)]
+#![feature(fnbox)]
+#![feature(maybe_uninit)]
+#![deny(unused_must_use)]
 #![no_std]
 
 // just keep it ...
@@ -17,11 +20,13 @@ extern crate log;
 extern crate lazy_static;
 
 pub use crate::process::{new_kernel_context, processor};
-use buddy_system_allocator::LockedHeap;
+use buddy_system_allocator::LockedHeapWithRescue;
 use rcore_thread::std_thread as thread;
 
 #[macro_use] // print!
 mod logging;
+#[macro_use]
+mod util;
 mod backtrace;
 mod consts;
 mod drivers;
@@ -34,7 +39,6 @@ mod shell;
 mod sync;
 mod syscall;
 mod trap;
-mod util;
 
 #[allow(dead_code)]
 #[cfg(target_arch = "x86_64")]
@@ -63,4 +67,5 @@ pub fn kmain() -> ! {
 ///
 /// It should be defined in memory mod, but in Rust `global_allocator` must be in root mod.
 #[global_allocator]
-static HEAP_ALLOCATOR: LockedHeap = LockedHeap::empty();
+static HEAP_ALLOCATOR: LockedHeapWithRescue =
+    LockedHeapWithRescue::new(crate::memory::enlarge_heap);

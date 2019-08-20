@@ -45,12 +45,24 @@ impl Pipe {
         )
     }
 
-    pub fn can_read(&self) -> bool {
+    fn can_read(&self) -> bool {
         if let PipeEnd::Read = self.direction {
-            self.data.lock().buf.len() > 0
+            self.data.lock().buf.len() > 0 || self.is_broken()
         } else {
             false
         }
+    }
+
+    fn can_write(&self) -> bool {
+        if let PipeEnd::Write = self.direction {
+            !self.is_broken()
+        } else {
+            false
+        }
+    }
+
+    fn is_broken(&self) -> bool {
+        Arc::strong_count(&self.data) < 2
     }
 }
 
@@ -58,6 +70,7 @@ impl Pipe {
 macro_rules! impl_inode {
     () => {
         fn metadata(&self) -> Result<Metadata> { Err(FsError::NotSupported) }
+        fn set_metadata(&self, _metadata: &Metadata) -> Result<()> { Ok(()) }
         fn sync_all(&self) -> Result<()> { Ok(()) }
         fn sync_data(&self) -> Result<()> { Ok(()) }
         fn resize(&self, _len: usize) -> Result<()> { Err(FsError::NotSupported) }
@@ -67,9 +80,9 @@ macro_rules! impl_inode {
         fn move_(&self, _old_name: &str, _target: &Arc<INode>, _new_name: &str) -> Result<()> { Err(FsError::NotDir) }
         fn find(&self, _name: &str) -> Result<Arc<INode>> { Err(FsError::NotDir) }
         fn get_entry(&self, _id: usize) -> Result<String> { Err(FsError::NotDir) }
+        fn io_control(&self, _cmd: u32, _data: usize) -> Result<()> { Err(FsError::NotSupported) }
         fn fs(&self) -> Arc<FileSystem> { unimplemented!() }
         fn as_any_ref(&self) -> &Any { self }
-        fn chmod(&self, _mode: u16) -> Result<()> { Ok(()) }
     };
 }
 
@@ -101,6 +114,14 @@ impl INode for Pipe {
         } else {
             Ok(0)
         }
+    }
+
+    fn poll(&self) -> Result<PollStatus> {
+        Ok(PollStatus {
+            read: self.can_read(),
+            write: self.can_write(),
+            error: false,
+        })
     }
     impl_inode!();
 }

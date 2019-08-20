@@ -1,14 +1,17 @@
 //! File handle for process
 
+use crate::thread;
 use alloc::{string::String, sync::Arc};
+use core::fmt;
 
-use rcore_fs::vfs::{FsError, INode, Metadata, Result};
+use rcore_fs::vfs::{FsError, INode, Metadata, PollStatus, Result};
 
 #[derive(Clone)]
 pub struct FileHandle {
     inode: Arc<INode>,
     offset: u64,
     options: OpenOptions,
+    pub path: String,
 }
 
 #[derive(Debug, Clone)]
@@ -17,6 +20,7 @@ pub struct OpenOptions {
     pub write: bool,
     /// Before each write, the file offset is positioned at the end of the file.
     pub append: bool,
+    pub nonblock: bool,
 }
 
 #[derive(Debug)]
@@ -27,12 +31,13 @@ pub enum SeekFrom {
 }
 
 impl FileHandle {
-    pub fn new(inode: Arc<INode>, options: OpenOptions) -> Self {
-        FileHandle {
+    pub fn new(inode: Arc<INode>, options: OpenOptions, path: String) -> Self {
+        return FileHandle {
             inode,
             offset: 0,
             options,
-        }
+            path,
+        };
     }
 
     pub fn read(&mut self, buf: &mut [u8]) -> Result<usize> {
@@ -45,7 +50,26 @@ impl FileHandle {
         if !self.options.read {
             return Err(FsError::InvalidParam); // FIXME: => EBADF
         }
-        let len = self.inode.read_at(offset, buf)?;
+        let mut len: usize = 0;
+        if !self.options.nonblock {
+            // block
+            loop {
+                match self.inode.read_at(offset, buf) {
+                    Ok(read_len) => {
+                        len = read_len;
+                        break;
+                    }
+                    Err(FsError::Again) => {
+                        thread::yield_now();
+                    }
+                    Err(err) => {
+                        return Err(err);
+                    }
+                }
+            }
+        } else {
+            len = self.inode.read_at(offset, buf)?;
+        }
         Ok(len)
     }
 
@@ -107,5 +131,35 @@ impl FileHandle {
         let name = self.inode.get_entry(self.offset as usize)?;
         self.offset += 1;
         Ok(name)
+    }
+
+    pub fn poll(&self) -> Result<PollStatus> {
+        self.inode.poll()
+    }
+
+    pub fn io_control(&self, cmd: u32, arg: usize) -> Result<()> {
+        self.inode.io_control(cmd, arg)
+    }
+
+    pub fn inode(&self) -> Arc<INode> {
+        self.inode.clone()
+    }
+
+    pub fn fcntl(&mut self, cmd: usize, arg: usize) -> Result<()> {
+        if arg == 2048 && cmd == 4 {
+            self.options.nonblock = true;
+        }
+        Ok(())
+    }
+}
+
+impl fmt::Debug for FileHandle {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        return f
+            .debug_struct("FileHandle")
+            .field("offset", &self.offset)
+            .field("options", &self.options)
+            .field("path", &self.path)
+            .finish();
     }
 }
