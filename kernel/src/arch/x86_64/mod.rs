@@ -26,10 +26,11 @@ pub extern "C" fn _start(boot_info: &'static BootInfo) -> ! {
     println!("Hello world! from CPU {}!", cpu_id);
 
     if cpu_id != 0 {
-        while !AP_CAN_INIT.load(Ordering::Relaxed) {
-            spin_loop_hint();
-        }
-        other_start();
+        loop{}
+        //while !AP_CAN_INIT.load(Ordering::Relaxed) {
+            //spin_loop_hint();
+        //}
+        //other_start();
     }
 
     // First init log mod, so that we can print log info.

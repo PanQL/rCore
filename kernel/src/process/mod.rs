@@ -11,6 +11,7 @@ pub mod structs;
 pub fn init() {
     // NOTE: max_time_slice <= 5 to ensure 'priority' test pass
     let scheduler = scheduler::RRScheduler::new(5);
+    //let scheduler = scheduler::StaticScheduler::new(100);   // 参数：每个超周期由多少个时钟周期组成
     let manager = Arc::new(ThreadPool::new(scheduler, MAX_PROCESS_NUM));
 
     unsafe {

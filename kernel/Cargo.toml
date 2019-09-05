@@ -64,7 +64,8 @@ lazy_static = { version = "1.3", features = ["spin_no_std"] }
 smoltcp = { git = "https://github.com/rcore-os/smoltcp", default-features = false, features = ["alloc", "log", "proto-ipv4", "proto-igmp", "socket-icmp", "socket-udp", "socket-tcp", "socket-raw"] }
 bitmap-allocator = { git = "https://github.com/rcore-os/bitmap-allocator" }
 rcore-memory = { path = "../crate/memory" }
-rcore-thread = { git = "https://github.com/PanQL/rcore-thread" }
+# rcore-thread = { git = "https://github.com/PanQL/rcore-thread", branch = "static"}
+rcore-thread = { path = "/home/pan/Code/rcore-thread" }
 rcore-fs = { git = "https://github.com/rcore-os/rcore-fs" }
 rcore-fs-sfs = { git = "https://github.com/rcore-os/rcore-fs" }
 

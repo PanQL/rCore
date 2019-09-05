@@ -31,7 +31,7 @@ impl Syscall<'_> {
         newtls: usize,
     ) -> SysResult {
         let clone_flags = CloneFlags::from_bits_truncate(flags);
-        info!(
+        error!(
             "clone: flags: {:?} == {:#x}, newsp: {:#x}, parent_tid: {:?}, child_tid: {:?}, newtls: {:#x}",
             clone_flags, flags, newsp, parent_tid, child_tid, newtls
         );

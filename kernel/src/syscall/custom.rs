@@ -55,4 +55,35 @@ impl Syscall<'_> {
         }
         Ok(0)
     }
+
+    /// Create a new thread in the current process.
+    /// The new thread's stack pointer will be set to `newsp`,
+    /// and thread pointer will be set to `newtls`.
+    /// The child tid will be stored at both `parent_tid` and `child_tid`.
+    /// This is partially implemented for musl only.
+    pub fn sys_tt_create(
+        &mut self,
+        flags: usize,
+        newsp: usize,
+        cycle: usize,
+        offset: usize,
+        max_time: usize,
+    ) -> SysResult {
+        let clone_flags = CloneFlags::from_bits_truncate(flags);
+        error!(
+            "tt_create: flags: {:?} == {:#x}, newsp: {:#x}, cycle: {:?}, offset: {:?}, max_time: {:#x}",
+            clone_flags, flags, newsp, cycle, offset, max_time
+        );
+        let new_thread = self
+            .thread
+            .clone(self.tf, newsp, 0, 0);
+        if let Some(tid) = processor().manager().tt_add(new_thread, cycle, offset, max_time) {
+            processor().manager().detach(tid);
+            //info!("clone: {} -> {}", thread::current().id(), tid);
+            error!("clone: {} -> {}", thread::current().id(), tid);
+            Ok(tid)
+        }else{
+            Err(SysError::EACCES)
+        }
+    }
 }

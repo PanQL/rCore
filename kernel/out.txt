@@ -1,0 +1,301 @@
+Building x86_64 kernel
+Building kernel
+Building bootloader v0.4.0
+Creating disk image at target/x86_64/bootimage.bin
+c[?7l[2J[0mSeaBIOS (version rel-1.12.1-0-ga5cab58e9a3f-prebuilt.qemu.org)
+
+
+iPXE (http://ipxe.org) 00:03.0 C980 PCI2.10 PnP PMM+BFF913B0+BFEF13B0 C980
+Press Ctrl-B to configure iPXE (PCI 00:03.0)...                                                                               
+
+
+Booting from Hard Disk...
+Booting (first stage)...
+Booting (second stage)...
+Hello world! from CPU 1!
+Hello world! from CPU 2!
+Hello world! from CPU 3!
+Hello world! from CPU 0!
+/ # [31m[ERROR][-] current time 0x1 time_slice 0x0 is_empty : true
+[0m[31m[ERROR][-] current time 0x2 time_slice 0x0 is_empty : true
+[0m./r[31m[ERROR][-] current time 0x3 time_slice 0x0 is_empty : true
+[0must/[31m[ERROR][-] current time 0x4 time_slice 0x0 is_empty : true
+[0mfor[31m[ERROR][-] current time 0x5 time_slice 0x0 is_empty : true
+[0mktes[31m[ERROR][-] current time 0x6 time_slice 0x0 is_empty : true
+[0mt
+[31m[ERROR][1] clone: flags: VM | FS | FILES | SIGHAND | THREAD | SYSVSEM | SETTLS | PARENT_SETTID | DETACHED == 0x5d0f00, newsp: 0x209ff8, parent_tid: 0x7ffffffffe14, child_tid: 0x7ffffffffe24, newtls: 0x0
+[0mhello threads
+[31m[ERROR][1] arg[0] : 0x5d0f00,arg[1] : 0x20bff8,arg[2] : 0x32,
+                        arg[3] : 0x1e,arg[4] : 0xa,arg[5] : 0x0
+[0m[31m[ERROR][1] tt_create: flags: VM | FS | FILES | SIGHAND | THREAD | SYSVSEM | SETTLS | PARENT_SETTID | DETACHED == 0x5d0f00, newsp: 0x20bff8, cycle: 50, offset: 30, max_time: 0xa
+[0m[31m[ERROR][1] cycle 0x32, offset 0x1e, max_time 0xa
+[0m[31m[ERROR][1] cycle 0x32, offset 0x1e
+[0m[31m[ERROR][1] current time 0x6 new time 0x50
+[0m[31m[ERROR][1] clone: 1 -> 3
+[0mhello world
+[31m[ERROR][1] current time 0x7 time_slice 0x0 is_empty : false
+[0m[31m[ERROR][1] next tt_time 0x50
+[0m[31m[ERROR][1] current time 0x8 time_slice 0x0 is_empty : false
+[0m[31m[ERROR][1] next tt_time 0x50
+[0m[31m[ERROR][1] current time 0x9 time_slice 0x0 is_empty : false
+[0m[31m[ERROR][1] next tt_time 0x50
+[0m[31m[ERROR][1] current time 0xa time_slice 0x0 is_empty : false
+[0m[31m[ERROR][1] next tt_time 0x50
+[0m[31m[ERROR][1] current time 0xb time_slice 0x0 is_empty : false
+[0m[31m[ERROR][1] next tt_time 0x50
+[0m[31m[ERROR][1] current time 0xc time_slice 0x0 is_empty : false
+[0m[31m[ERROR][1] next tt_time 0x50
+[0m[31m[ERROR][1] current time 0xd time_slice 0x0 is_empty : false
+[0m[31m[ERROR][1] next tt_time 0x50
+[0m[31m[ERROR][1] current time 0xe time_slice 0x0 is_empty : false
+[0m[31m[ERROR][1] next tt_time 0x50
+[0m[31m[ERROR][1] current time 0xf time_slice 0x0 is_empty : false
+[0m[31m[ERROR][1] next tt_time 0x50
+[0m[31m[ERROR][1] current time 0x10 time_slice 0x0 is_empty : false
+[0m[31m[ERROR][1] next tt_time 0x50
+[0m[31m[ERROR][1] current time 0x11 time_slice 0x0 is_empty : false
+[0m[31m[ERROR][1] next tt_time 0x50
+[0m[31m[ERROR][1] current time 0x12 time_slice 0x0 is_empty : false
+[0m[31m[ERROR][1] next tt_time 0x50
+[0m[31m[ERROR][1] current time 0x13 time_slice 0x0 is_empty : false
+[0m[31m[ERROR][1] next tt_time 0x50
+[0m[31m[ERROR][1] current time 0x14 time_slice 0x0 is_empty : false
+[0m[31m[ERROR][1] next tt_time 0x50
+[0m[31m[ERROR][1] current time 0x15 time_slice 0x0 is_empty : false
+[0m[31m[ERROR][1] next tt_time 0x50
+[0m[31m[ERROR][1] current time 0x16 time_slice 0x0 is_empty : false
+[0m[31m[ERROR][1] next tt_time 0x50
+[0m[31m[ERROR][1] current time 0x17 time_slice 0x0 is_empty : false
+[0m[31m[ERROR][1] next tt_time 0x50
+[0m[31m[ERROR][1] current time 0x18 time_slice 0x0 is_empty : false
+[0m[31m[ERROR][1] next tt_time 0x50
+[0m[31m[ERROR][1] current time 0x19 time_slice 0x0 is_empty : false
+[0m[31m[ERROR][1] next tt_time 0x50
+[0m[31m[ERROR][1] current time 0x1a time_slice 0x0 is_empty : false
+[0m[31m[ERROR][1] next tt_time 0x50
+[0m[31m[ERROR][1] current time 0x1b time_slice 0x0 is_empty : false
+[0m[31m[ERROR][1] next tt_time 0x50
+[0m[31m[ERROR][1] current time 0x1c time_slice 0x0 is_empty : false
+[0m[31m[ERROR][1] next tt_time 0x50
+[0m[31m[ERROR][1] current time 0x1d time_slice 0x0 is_empty : false
+[0m[31m[ERROR][1] next tt_time 0x50
+[0m[31m[ERROR][1] current time 0x1e time_slice 0x0 is_empty : false
+[0m[31m[ERROR][1] next tt_time 0x50
+[0m[31m[ERROR][1] current time 0x1f time_slice 0x0 is_empty : false
+[0m[31m[ERROR][1] next tt_time 0x50
+[0m[31m[ERROR][1] current time 0x20 time_slice 0x0 is_empty : false
+[0m[31m[ERROR][1] next tt_time 0x50
+[0m[31m[ERROR][1] current time 0x21 time_slice 0x0 is_empty : false
+[0m[31m[ERROR][1] next tt_time 0x50
+[0m[31m[ERROR][1] current time 0x22 time_slice 0x0 is_empty : false
+[0m[31m[ERROR][1] next tt_time 0x50
+[0m[31m[ERROR][1] current time 0x23 time_slice 0x0 is_empty : false
+[0m[31m[ERROR][1] next tt_time 0x50
+[0m[31m[ERROR][1] current time 0x24 time_slice 0x0 is_empty : false
+[0m[31m[ERROR][1] next tt_time 0x50
+[0m[31m[ERROR][1] current time 0x25 time_slice 0x0 is_empty : false
+[0m[31m[ERROR][1] next tt_time 0x50
+[0m[31m[ERROR][1] current time 0x26 time_slice 0x0 is_empty : false
+[0m[31m[ERROR][1] next tt_time 0x50
+[0m[31m[ERROR][1] current time 0x27 time_slice 0x0 is_empty : false
+[0m[31m[ERROR][1] next tt_time 0x50
+[0m[31m[ERROR][1] current time 0x28 time_slice 0x0 is_empty : false
+[0m[31m[ERROR][1] next tt_time 0x50
+[0m[31m[ERROR][1] current time 0x29 time_slice 0x0 is_empty : false
+[0m[31m[ERROR][1] next tt_time 0x50
+[0m[31m[ERROR][1] current time 0x2a time_slice 0x0 is_empty : false
+[0m[31m[ERROR][1] next tt_time 0x50
+[0m[31m[ERROR][1] current time 0x2b time_slice 0x0 is_empty : false
+[0m[31m[ERROR][1] next tt_time 0x50
+[0m[31m[ERROR][1] current time 0x2c time_slice 0x0 is_empty : false
+[0m[31m[ERROR][1] next tt_time 0x50
+[0m[31m[ERROR][1] current time 0x2d time_slice 0x0 is_empty : false
+[0m[31m[ERROR][1] next tt_time 0x50
+[0m[31m[ERROR][1] current time 0x2e time_slice 0x0 is_empty : false
+[0m[31m[ERROR][1] next tt_time 0x50
+[0m[31m[ERROR][1] current time 0x2f time_slice 0x0 is_empty : false
+[0m[31m[ERROR][1] next tt_time 0x50
+[0m[31m[ERROR][1] current time 0x30 time_slice 0x0 is_empty : false
+[0m[31m[ERROR][1] next tt_time 0x50
+[0m[31m[ERROR][1] current time 0x31 time_slice 0x0 is_empty : false
+[0m[31m[ERROR][1] next tt_time 0x50
+[0m[31m[ERROR][1] current time 0x32 time_slice 0x0 is_empty : false
+[0m[31m[ERROR][1] next tt_time 0x50
+[0m[31m[ERROR][1] current time 0x33 time_slice 0x0 is_empty : false
+[0m[31m[ERROR][1] next tt_time 0x50
+[0m[31m[ERROR][1] current time 0x34 time_slice 0x0 is_empty : false
+[0m[31m[ERROR][1] next tt_time 0x50
+[0m[31m[ERROR][1] current time 0x35 time_slice 0x0 is_empty : false
+[0m[31m[ERROR][1] next tt_time 0x50
+[0m[31m[ERROR][1] current time 0x36 time_slice 0x0 is_empty : false
+[0m[31m[ERROR][1] next tt_time 0x50
+[0m[31m[ERROR][1] current time 0x37 time_slice 0x0 is_empty : false
+[0m[31m[ERROR][1] next tt_time 0x50
+[0m[31m[ERROR][1] current time 0x38 time_slice 0x0 is_empty : false
+[0m[31m[ERROR][1] next tt_time 0x50
+[0m[31m[ERROR][1] current time 0x39 time_slice 0x0 is_empty : false
+[0m[31m[ERROR][1] next tt_time 0x50
+[0m[31m[ERROR][1] current time 0x3a time_slice 0x0 is_empty : false
+[0m[31m[ERROR][1] next tt_time 0x50
+[0m[31m[ERROR][1] current time 0x3b time_slice 0x0 is_empty : false
+[0m[31m[ERROR][1] next tt_time 0x50
+[0m[31m[ERROR][1] current time 0x3c time_slice 0x0 is_empty : false
+[0m[31m[ERROR][1] next tt_time 0x50
+[0m[31m[ERROR][1] current time 0x3d time_slice 0x0 is_empty : false
+[0m[31m[ERROR][1] next tt_time 0x50
+[0m[31m[ERROR][1] current time 0x3e time_slice 0x0 is_empty : false
+[0m[31m[ERROR][1] next tt_time 0x50
+[0m[31m[ERROR][1] current time 0x3f time_slice 0x0 is_empty : false
+[0m[31m[ERROR][1] next tt_time 0x50
+[0m[31m[ERROR][1] current time 0x40 time_slice 0x0 is_empty : false
+[0m[31m[ERROR][1] next tt_time 0x50
+[0m[31m[ERROR][1] current time 0x41 time_slice 0x0 is_empty : false
+[0m[31m[ERROR][1] next tt_time 0x50
+[0m[31m[ERROR][1] current time 0x42 time_slice 0x0 is_empty : false
+[0m[31m[ERROR][1] next tt_time 0x50
+[0m[31m[ERROR][1] current time 0x43 time_slice 0x0 is_empty : false
+[0m[31m[ERROR][1] next tt_time 0x50
+[0m[31m[ERROR][1] current time 0x44 time_slice 0x0 is_empty : false
+[0m[31m[ERROR][1] next tt_time 0x50
+[0m[31m[ERROR][1] current time 0x45 time_slice 0x0 is_empty : false
+[0m[31m[ERROR][1] next tt_time 0x50
+[0m[31m[ERROR][1] current time 0x46 time_slice 0x0 is_empty : false
+[0m[31m[ERROR][1] next tt_time 0x50
+[0m[31m[ERROR][1] current time 0x47 time_slice 0x0 is_empty : false
+[0m[31m[ERROR][1] next tt_time 0x50
+[0m[31m[ERROR][1] current time 0x48 time_slice 0x0 is_empty : false
+[0m[31m[ERROR][1] next tt_time 0x50
+[0m[31m[ERROR][1] current time 0x49 time_slice 0x0 is_empty : false
+[0m[31m[ERROR][1] next tt_time 0x50
+[0m[31m[ERROR][1] current time 0x4a time_slice 0x0 is_empty : false
+[0m[31m[ERROR][1] next tt_time 0x50
+[0m[31m[ERROR][1] current time 0x4b time_slice 0x0 is_empty : false
+[0m[31m[ERROR][1] next tt_time 0x50
+[0m[31m[ERROR][1] current time 0x4c time_slice 0x0 is_empty : false
+[0m[31m[ERROR][1] next tt_time 0x50
+[0m[31m[ERROR][1] current time 0x4d time_slice 0x0 is_empty : false
+[0m[31m[ERROR][1] next tt_time 0x50
+[0m[31m[ERROR][1] current time 0x4e time_slice 0x0 is_empty : false
+[0m[31m[ERROR][1] next tt_time 0x50
+[0m[31m[ERROR][1] current time 0x4f time_slice 0x0 is_empty : false
+[0m[31m[ERROR][1] next tt_time 0x50
+[0m[31m[ERROR][1] current time 0x50 time_slice 0x0 is_empty : false
+[0m[31m[ERROR][1] next tt_time 0x50
+[0m[31m[ERROR][1] tt tick ret is true
+[0m[31m[ERROR][-] cycle is 0x32
+[0mhello tt_thread
+[31m[ERROR][1] current time 0x51 time_slice 0x0 is_empty : false
+[0m[31m[ERROR][1] next tt_time 0x82
+[0m[31m[ERROR][1] current time 0x52 time_slice 0x0 is_empty : false
+[0m[31m[ERROR][1] next tt_time 0x82
+[0m[31m[ERROR][1] current time 0x53 time_slice 0x0 is_empty : false
+[0m[31m[ERROR][1] next tt_time 0x82
+[0m[31m[ERROR][1] current time 0x54 time_slice 0x0 is_empty : false
+[0m[31m[ERROR][1] next tt_time 0x82
+[0m[31m[ERROR][1] current time 0x55 time_slice 0x0 is_empty : false
+[0m[31m[ERROR][1] next tt_time 0x82
+[0m[31m[ERROR][1] current time 0x56 time_slice 0x0 is_empty : false
+[0m[31m[ERROR][1] next tt_time 0x82
+[0m[31m[ERROR][1] current time 0x57 time_slice 0x0 is_empty : false
+[0m[31m[ERROR][1] next tt_time 0x82
+[0m[31m[ERROR][1] current time 0x58 time_slice 0x0 is_empty : false
+[0m[31m[ERROR][1] next tt_time 0x82
+[0m[31m[ERROR][1] current time 0x59 time_slice 0x0 is_empty : false
+[0m[31m[ERROR][1] next tt_time 0x82
+[0m[31m[ERROR][1] current time 0x5a time_slice 0x0 is_empty : false
+[0m[31m[ERROR][1] next tt_time 0x82
+[0m[31m[ERROR][1] current time 0x5b time_slice 0x0 is_empty : false
+[0m[31m[ERROR][1] next tt_time 0x82
+[0m[31m[ERROR][1] current time 0x5c time_slice 0x0 is_empty : false
+[0m[31m[ERROR][1] next tt_time 0x82
+[0m[31m[ERROR][1] current time 0x5d time_slice 0x0 is_empty : false
+[0m[31m[ERROR][1] next tt_time 0x82
+[0m[31m[ERROR][1] current time 0x5e time_slice 0x0 is_empty : false
+[0m[31m[ERROR][1] next tt_time 0x82
+[0m[31m[ERROR][1] current time 0x5f time_slice 0x0 is_empty : false
+[0m[31m[ERROR][1] next tt_time 0x82
+[0m[31m[ERROR][1] current time 0x60 time_slice 0x0 is_empty : false
+[0m[31m[ERROR][1] next tt_time 0x82
+[0m[31m[ERROR][1] current time 0x61 time_slice 0x0 is_empty : false
+[0m[31m[ERROR][1] next tt_time 0x82
+[0m[31m[ERROR][1] current time 0x62 time_slice 0x0 is_empty : false
+[0m[31m[ERROR][1] next tt_time 0x82
+[0m[31m[ERROR][1] current time 0x63 time_slice 0x0 is_empty : false
+[0m[31m[ERROR][1] next tt_time 0x82
+[0m[31m[ERROR][1] current time 0x64 time_slice 0x0 is_empty : false
+[0m[31m[ERROR][1] next tt_time 0x82
+[0m[31m[ERROR][1] current time 0x65 time_slice 0x0 is_empty : false
+[0m[31m[ERROR][1] next tt_time 0x82
+[0m[31m[ERROR][1] current time 0x66 time_slice 0x0 is_empty : false
+[0m[31m[ERROR][1] next tt_time 0x82
+[0m[31m[ERROR][1] current time 0x67 time_slice 0x0 is_empty : false
+[0m[31m[ERROR][1] next tt_time 0x82
+[0m[31m[ERROR][1] current time 0x68 time_slice 0x0 is_empty : false
+[0m[31m[ERROR][1] next tt_time 0x82
+[0m[31m[ERROR][1] current time 0x69 time_slice 0x0 is_empty : false
+[0m[31m[ERROR][1] next tt_time 0x82
+[0m[31m[ERROR][1] current time 0x6a time_slice 0x0 is_empty : false
+[0m[31m[ERROR][1] next tt_time 0x82
+[0m[31m[ERROR][1] current time 0x6b time_slice 0x0 is_empty : false
+[0m[31m[ERROR][1] next tt_time 0x82
+[0m[31m[ERROR][1] current time 0x6c time_slice 0x0 is_empty : false
+[0m[31m[ERROR][1] next tt_time 0x82
+[0m[31m[ERROR][1] current time 0x6d time_slice 0x0 is_empty : false
+[0m[31m[ERROR][1] next tt_time 0x82
+[0m[31m[ERROR][1] current time 0x6e time_slice 0x0 is_empty : false
+[0m[31m[ERROR][1] next tt_time 0x82
+[0m[31m[ERROR][1] current time 0x6f time_slice 0x0 is_empty : false
+[0m[31m[ERROR][1] next tt_time 0x82
+[0m[31m[ERROR][1] current time 0x70 time_slice 0x0 is_empty : false
+[0m[31m[ERROR][1] next tt_time 0x82
+[0m[31m[ERROR][1] current time 0x71 time_slice 0x0 is_empty : false
+[0m[31m[ERROR][1] next tt_time 0x82
+[0m[31m[ERROR][1] current time 0x72 time_slice 0x0 is_empty : false
+[0m[31m[ERROR][1] next tt_time 0x82
+[0m[31m[ERROR][1] current time 0x73 time_slice 0x0 is_empty : false
+[0m[31m[ERROR][1] next tt_time 0x82
+[0m[31m[ERROR][1] current time 0x74 time_slice 0x0 is_empty : false
+[0m[31m[ERROR][1] next tt_time 0x82
+[0m[31m[ERROR][1] current time 0x75 time_slice 0x0 is_empty : false
+[0m[31m[ERROR][1] next tt_time 0x82
+[0m[31m[ERROR][1] current time 0x76 time_slice 0x0 is_empty : false
+[0m[31m[ERROR][1] next tt_time 0x82
+[0m[31m[ERROR][1] current time 0x77 time_slice 0x0 is_empty : false
+[0m[31m[ERROR][1] next tt_time 0x82
+[0m[31m[ERROR][1] current time 0x78 time_slice 0x0 is_empty : false
+[0m[31m[ERROR][1] next tt_time 0x82
+[0m[31m[ERROR][1] current time 0x79 time_slice 0x0 is_empty : false
+[0m[31m[ERROR][1] next tt_time 0x82
+[0m[31m[ERROR][1] current time 0x7a time_slice 0x0 is_empty : false
+[0m[31m[ERROR][1] next tt_time 0x82
+[0m[31m[ERROR][1] current time 0x7b time_slice 0x0 is_empty : false
+[0m[31m[ERROR][1] next tt_time 0x82
+[0m[31m[ERROR][1] current time 0x7c time_slice 0x0 is_empty : false
+[0m[31m[ERROR][1] next tt_time 0x82
+[0m[31m[ERROR][1] current time 0x7d time_slice 0x0 is_empty : false
+[0m[31m[ERROR][1] next tt_time 0x82
+[0m[31m[ERROR][1] current time 0x7e time_slice 0x0 is_empty : false
+[0m[31m[ERROR][1] next tt_time 0x82
+[0m[31m[ERROR][1] current time 0x7f time_slice 0x0 is_empty : false
+[0m[31m[ERROR][1] next tt_time 0x82
+[0m[31m[ERROR][1] current time 0x80 time_slice 0x0 is_empty : false
+[0m[31m[ERROR][1] next tt_time 0x82
+[0m[31m[ERROR][1] current time 0x81 time_slice 0x0 is_empty : false
+[0m[31m[ERROR][1] next tt_time 0x82
+[0m[31m[ERROR][1] current time 0x82 time_slice 0x0 is_empty : false
+[0m[31m[ERROR][1] next tt_time 0x82
+[0m[31m[ERROR][1] tt tick ret is true
+[0m[31m[ERROR][-] cycle is 0x32
+[0mhello tt_thread
+[31m[ERROR][1] current time 0x83 time_slice 0x0 is_empty : false
+[0m[31m[ERROR][1] next tt_time 0xb4
+[0m[31m[ERROR][1] current time 0x84 time_slice 0x0 is_empty : false
+[0m[31m[ERROR][1] next tt_time 0xb4
+[0m[31m[ERROR][1] current time 0x85 time_slice 0x0 is_empty : false
+[0m[31m[ERROR][1] next tt_time 0xb4
+[0m[31m[ERROR][1] current time 0x86 time_slice 0x0 is_empty : false
+[0m[31m[ERROR][1] next tt_time 0xb4
+[0m[31m[ERROR][1] current time 0x87 time_slice 0x0 is_empty : false
+[0m[31m[ERROR][1] next tt_time 0xb4
+[0mQEMU: Terminated
+

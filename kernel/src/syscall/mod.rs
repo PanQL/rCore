@@ -303,6 +303,25 @@ impl Syscall<'_> {
             SYS_GET_PADDR => {
                 self.sys_get_paddr(args[0] as *const u64, args[1] as *mut u64, args[2])
             }
+            //SYS_TT_CREATE => self.sys_tt_create(
+                //args[0] as usize,
+                //args[1] as usize,
+                //args[2] as usize,
+                //args[3] as usize,
+                //args[4] as usize,
+            //),
+            SYS_TT_CREATE => {
+                error!("arg[0] : {:#x},arg[1] : {:#x},arg[2] : {:#x},
+                        arg[3] : {:#x},arg[4] : {:#x},arg[5] : {:#x}",
+                        args[0], args[1], args[2], args[3], args[4], args[5]);
+                self.sys_tt_create(
+                    args[0] as usize,
+                    args[1] as usize,
+                    args[2] as usize,
+                    args[3] as usize,
+                    args[4] as usize,
+                )
+            }
             _ => {
                 let ret = match () {
                     #[cfg(target_arch = "x86_64")]
