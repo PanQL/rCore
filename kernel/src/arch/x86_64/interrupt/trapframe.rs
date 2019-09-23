@@ -118,6 +118,9 @@ struct InitStack {
 }
 
 impl InitStack {
+    /// Store stack content of self into where 'stack_top' point to
+    ///
+    /// 'stack_top' : the new stack top to push this stack at
     unsafe fn push_at(self, stack_top: usize) -> Context {
         let ptr = (stack_top as *mut Self).offset(-1);
         *ptr = self;
@@ -176,10 +179,17 @@ impl Context {
         : : : : "intel" "volatile" )
     }
 
+    /// Get a null context
     pub unsafe fn null() -> Self {
         Context(0)
     }
 
+    /// Generate a new context for kernel thread
+    ///
+    /// entry : entry virtual address for thread
+    /// arg : arguments for the thread's startup
+    /// kstack_top : virtual address of kernel stack top
+    /// cr3 : page_table root address
     pub unsafe fn new_kernel_thread(
         entry: extern "C" fn(usize) -> !,
         arg: usize,
@@ -192,6 +202,12 @@ impl Context {
         }
         .push_at(kstack_top)
     }
+    /// Generate a new context for user thread
+    ///
+    /// entry_addr : entry virtual address for thread
+    /// ustack_top : virtual address of user stack top
+    /// kstack_top : virtual address of kernel stack top
+    /// cr3 : page_table root address for new thread
     pub unsafe fn new_user_thread(
         entry_addr: usize,
         ustack_top: usize,
@@ -204,7 +220,16 @@ impl Context {
         }
         .push_at(kstack_top)
     }
-    pub unsafe fn new_fork(tf: &TrapFrame, kstack_top: usize, cr3: usize) -> Self {
+    /// Generate a new context for sys_fork operation
+    ///
+    /// tf : trapframe of old thread
+    /// kstack_top : virtual address of kernel stack top
+    /// cr3 : page_table root address for new thread
+    pub unsafe fn new_fork(
+        tf: &TrapFrame, 
+        kstack_top: usize, 
+        cr3: usize,
+    ) -> Self {
         InitStack {
             context: ContextData::new(cr3),
             tf: {
@@ -215,6 +240,13 @@ impl Context {
         }
         .push_at(kstack_top)
     }
+    /// Generate a new context for sys_clone operation
+    ///
+    /// tf : trapframe of old thread
+    /// ustack_top : virtual address of user stack top
+    /// kstack_top : virtual address of kernel stack top
+    /// cr3 : page_table root address for new thread
+    /// tls : fsbase for new thread
     pub unsafe fn new_clone(
         tf: &TrapFrame,
         ustack_top: usize,
