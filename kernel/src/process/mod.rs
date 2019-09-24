@@ -8,6 +8,11 @@ pub use rcore_thread::*;
 mod abi;
 pub mod structs;
 
+/// Initialize process-manage part of kernel(only when processor's id is 0)
+///
+/// Create a new ThreadPool with default RRScheduler.
+/// Initialize MAX_CPU_NUM core-local object.
+/// Create a new user thread running shell.
 pub fn init() {
     // NOTE: max_time_slice <= 5 to ensure 'priority' test pass
     let scheduler = scheduler::RRScheduler::new(5);
@@ -24,6 +29,7 @@ pub fn init() {
     info!("process: init end");
 }
 
+/// Local objects for all MAX_CPU_NUM cpu core
 static PROCESSORS: [Processor; MAX_CPU_NUM] = [
     // TODO: More elegant ?
     Processor::new(),
@@ -120,11 +126,15 @@ pub unsafe fn current_thread() -> &'static mut Thread {
 
 // Implement dependencies for std::thread
 
+/// Get current processor
+///
+/// `Processor` is a processor-local object.
 #[no_mangle]
 pub fn processor() -> &'static Processor {
     &PROCESSORS[cpu::id()]
 }
 
+/// Get a new kernel context starting from `entry` with `arg`
 #[no_mangle]
 pub fn new_kernel_context(entry: extern "C" fn(usize) -> !, arg: usize) -> Box<Context> {
     Thread::new_kernel(entry, arg)

@@ -24,6 +24,7 @@ use crate::processor;
 use core::mem::MaybeUninit;
 use rcore_fs::vfs::INode;
 
+/// Thread-local object
 pub struct Thread {
     context: Context,
     kstack: KernelStack,
@@ -392,6 +393,7 @@ impl Process {
 
         self_ref
     }
+    /// Find a free fd and return it
     fn get_free_fd(&self) -> usize {
         (0..).find(|i| !self.files.contains_key(i)).unwrap()
     }
