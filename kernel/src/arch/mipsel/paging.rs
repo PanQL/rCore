@@ -1,5 +1,6 @@
 // Depends on kernel
 use crate::memory::{alloc_frame, dealloc_frame};
+use core::mem::ManuallyDrop;
 use mips::addr::*;
 use mips::paging::{
     FrameAllocator, FrameDeallocator, Mapper, PageTable as MIPSPageTable, PageTableEntry,
@@ -11,7 +12,7 @@ use rcore_memory::paging::*;
 pub struct PageTableImpl {
     page_table: TwoLevelPageTable<'static>,
     root_frame: Frame,
-    entry: PageEntry,
+    entry: Option<PageEntry>,
 }
 
 /// PageTableEntry: the contents of this entry.
@@ -19,7 +20,7 @@ pub struct PageTableImpl {
 pub struct PageEntry(&'static mut PageTableEntry, Page);
 
 impl PageTable for PageTableImpl {
-    fn map(&mut self, addr: usize, target: usize) -> &mut Entry {
+    fn map(&mut self, addr: usize, target: usize) -> &mut dyn Entry {
         // map the 4K `page` to the 4K `frame` with `flags`
         let flags = EF::VALID | EF::WRITABLE | EF::CACHEABLE;
         let page = Page::of_addr(VirtAddr::new(addr));
@@ -38,12 +39,12 @@ impl PageTable for PageTableImpl {
         flush.flush();
     }
 
-    fn get_entry(&mut self, vaddr: usize) -> Option<&mut Entry> {
+    fn get_entry(&mut self, vaddr: usize) -> Option<&mut dyn Entry> {
         let page = Page::of_addr(VirtAddr::new(vaddr));
         if let Ok(e) = self.page_table.ref_entry(page.clone()) {
             let e = unsafe { &mut *(e as *mut PageTableEntry) };
-            self.entry = PageEntry(e, page);
-            Some(&mut self.entry as &mut Entry)
+            self.entry = Some(PageEntry(e, page));
+            Some(self.entry.as_mut().unwrap())
         } else {
             None
         }
@@ -82,9 +83,7 @@ pub fn root_page_table_buffer() -> &'static mut MIPSPageTable {
 /// implementation for the Entry trait in /crate/memory/src/paging/mod.rs
 impl Entry for PageEntry {
     fn update(&mut self) {
-        unsafe {
-            TLBEntry::clear_all();
-        }
+        TLBEntry::clear_all();
     }
     fn accessed(&self) -> bool {
         self.0.flags().contains(EF::ACCESSED)
@@ -148,15 +147,21 @@ impl Entry for PageEntry {
 
 impl PageTableImpl {
     /// Unsafely get the current active page table.
-    /// WARN: You MUST call `core::mem::forget` for it after use!
-    pub unsafe fn active() -> Self {
+    /// Using ManuallyDrop to wrap the page table: this is how `core::mem::forget` is implemented now.
+    pub unsafe fn active() -> ManuallyDrop<Self> {
         let frame = Frame::of_addr(PhysAddr::new(get_root_page_table_ptr() & 0x7fffffff));
         let table = root_page_table_buffer();
-        PageTableImpl {
+        ManuallyDrop::new(PageTableImpl {
             page_table: TwoLevelPageTable::new(table),
             root_frame: frame,
-            entry: unsafe { core::mem::MaybeUninit::uninitialized().into_initialized() },
-        }
+            entry: None,
+        })
+    }
+
+    /// The method for getting the kernel page table.
+    /// In mipsel kernel page table and user page table are the same table. However you have to do the initialization.
+    pub unsafe fn kernel_table() -> ManuallyDrop<Self> {
+        Self::active()
     }
 }
 
@@ -171,7 +176,7 @@ impl PageTableExt for PageTableImpl {
         PageTableImpl {
             page_table: TwoLevelPageTable::new(table),
             root_frame: frame,
-            entry: unsafe { core::mem::MaybeUninit::uninitialized().into_initialized() },
+            entry: None,
         }
     }
 
@@ -192,9 +197,7 @@ impl PageTableExt for PageTableImpl {
     }
 
     fn flush_tlb() {
-        unsafe {
-            TLBEntry::clear_all();
-        }
+        TLBEntry::clear_all();
     }
 }
 

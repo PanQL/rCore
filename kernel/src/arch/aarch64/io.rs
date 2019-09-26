@@ -1,7 +1,7 @@
 //! Input/output for aarch64.
 
-use super::driver::console::CONSOLE;
 use super::driver::serial::*;
+use crate::drivers::console::CONSOLE;
 use core::fmt::{Arguments, Write};
 
 pub fn getchar() -> char {
@@ -13,8 +13,12 @@ pub fn putfmt(fmt: Arguments) {
     unsafe { SERIAL_PORT.force_unlock() }
     SERIAL_PORT.lock().write_fmt(fmt).unwrap();
 
-    unsafe { CONSOLE.force_unlock() }
-    if let Some(console) = CONSOLE.lock().as_mut() {
-        console.write_fmt(fmt).unwrap();
+    // print to graphic
+    #[cfg(feature = "consolegraphic")]
+    {
+        unsafe { CONSOLE.force_unlock() }
+        if let Some(console) = CONSOLE.lock().as_mut() {
+            console.write_fmt(fmt).unwrap();
+        }
     }
 }

@@ -1,6 +1,6 @@
 //! Memory management structures
 
-use alloc::{boxed::Box, string::String, vec::Vec};
+use alloc::{boxed::Box, vec::Vec};
 use core::fmt::{Debug, Error, Formatter};
 use core::mem::size_of;
 
@@ -18,7 +18,7 @@ pub struct MemoryArea {
     start_addr: VirtAddr,
     end_addr: VirtAddr,
     attr: MemoryAttr,
-    handler: Box<MemoryHandler>,
+    handler: Box<dyn MemoryHandler>,
     name: &'static str,
 }
 
@@ -49,7 +49,7 @@ impl MemoryArea {
             self.check_read_array(ptr, count)
         }
     }
-    /// Test whether this area is (page) overlap with area [`start_addr`, `end_addr`]
+    /// Test whether this area is (page) overlap with area [`start_addr`, `end_addr`)
     pub fn is_overlap_with(&self, start_addr: VirtAddr, end_addr: VirtAddr) -> bool {
         let p0 = Page::of_addr(self.start_addr);
         let p1 = Page::of_addr(self.end_addr - 1) + 1;
@@ -58,13 +58,13 @@ impl MemoryArea {
         !(p1 <= p2 || p0 >= p3)
     }
     /// Map all pages in the area to page table `pt`
-    fn map(&self, pt: &mut PageTable) {
+    fn map(&self, pt: &mut dyn PageTable) {
         for page in Page::range_of(self.start_addr, self.end_addr) {
             self.handler.map(pt, page.start_address(), &self.attr);
         }
     }
     /// Unmap all pages in the area from page table `pt`
-    fn unmap(&self, pt: &mut PageTable) {
+    fn unmap(&self, pt: &mut dyn PageTable) {
         for page in Page::range_of(self.start_addr, self.end_addr) {
             self.handler.unmap(pt, page.start_address());
         }
@@ -103,7 +103,7 @@ impl MemoryAttr {
     }
     /// Apply the attributes to page table entry, then update it.
     /// NOTE: You may need to set present manually.
-    pub fn apply(&self, entry: &mut Entry) {
+    pub fn apply(&self, entry: &mut dyn Entry) {
         entry.set_user(self.user);
         entry.set_writable(!self.readonly);
         entry.set_execute(self.execute);
@@ -196,13 +196,15 @@ impl<T: PageTableExt> MemorySet<T> {
     /// Add an area to this set
     pub fn push(
         &mut self,
-        start_addr: VirtAddr,
-        end_addr: VirtAddr,
+        mut start_addr: VirtAddr,
+        mut end_addr: VirtAddr,
         attr: MemoryAttr,
         handler: impl MemoryHandler,
         name: &'static str,
     ) {
-        assert!(start_addr <= end_addr, "invalid memory area");
+        start_addr = start_addr & !(PAGE_SIZE - 1);
+        end_addr = (end_addr + PAGE_SIZE - 1) & !(PAGE_SIZE - 1);
+        assert!(start_addr < end_addr, "invalid memory area");
         assert!(
             self.test_free_area(start_addr, end_addr),
             "memory area overlap"

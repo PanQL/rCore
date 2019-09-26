@@ -18,6 +18,7 @@ use crate::util;
 
 pub use self::custom::*;
 pub use self::fs::*;
+pub use self::lkm::*;
 pub use self::mem::*;
 pub use self::misc::*;
 pub use self::net::*;
@@ -26,6 +27,7 @@ pub use self::time::*;
 
 mod custom;
 mod fs;
+mod lkm;
 mod mem;
 mod misc;
 mod net;
@@ -298,11 +300,22 @@ impl Syscall<'_> {
             }
             SYS_RT_SIGQUEUEINFO => self.unimplemented("rt_sigqueueinfo", Ok(0)),
 
+            // kernel module
+            SYS_INIT_MODULE => {
+                self.sys_init_module(args[0] as *const u8, args[1] as usize, args[2] as *const u8)
+            }
+            SYS_FINIT_MODULE => {
+                debug!("[LKM] sys_finit_module is unimplemented");
+                Err(SysError::ENOSYS)
+            }
+            SYS_DELETE_MODULE => self.sys_delete_module(args[0] as *const u8, args[1] as u32),
+
             // custom
             SYS_MAP_PCI_DEVICE => self.sys_map_pci_device(args[0], args[1]),
             SYS_GET_PADDR => {
                 self.sys_get_paddr(args[0] as *const u64, args[1] as *mut u64, args[2])
             }
+
             _ => {
                 let ret = match () {
                     #[cfg(target_arch = "x86_64")]
@@ -473,6 +486,7 @@ pub enum SysError {
     ENOLCK = 37,
     ENOSYS = 38,
     ENOTEMPTY = 39,
+    ELOOP = 40,
     ENOTSOCK = 80,
     ENOPROTOOPT = 92,
     EPFNOSUPPORT = 96,
@@ -530,6 +544,7 @@ impl fmt::Display for SysError {
                 ENOLCK => "No record locks available",
                 ENOSYS => "Function not implemented",
                 ENOTEMPTY => "Directory not empty",
+                ELOOP => "Too many symbolic links encountered",
                 ENOTSOCK => "Socket operation on non-socket",
                 ENOPROTOOPT => "Protocol not available",
                 EPFNOSUPPORT => "Protocol family not supported",
@@ -562,28 +577,36 @@ pub fn spin_and_wait<T>(condvars: &[&Condvar], mut action: impl FnMut() -> Optio
 }
 
 pub fn check_and_clone_cstr(user: *const u8) -> Result<String, SysError> {
-    let mut buffer = Vec::new();
-    for i in 0.. {
-        let addr = unsafe { user.add(i) };
-        let data = copy_from_user(addr).ok_or(SysError::EFAULT)?;
-        if data == 0 {
-            break;
+    if user.is_null() {
+        Ok(String::new())
+    } else {
+        let mut buffer = Vec::new();
+        for i in 0.. {
+            let addr = unsafe { user.add(i) };
+            let data = copy_from_user(addr).ok_or(SysError::EFAULT)?;
+            if data == 0 {
+                break;
+            }
+            buffer.push(data);
         }
-        buffer.push(data);
+        String::from_utf8(buffer).map_err(|_| SysError::EFAULT)
     }
-    String::from_utf8(buffer).map_err(|_| SysError::EFAULT)
 }
 
 pub fn check_and_clone_cstr_array(user: *const *const u8) -> Result<Vec<String>, SysError> {
-    let mut buffer = Vec::new();
-    for i in 0.. {
-        let addr = unsafe { user.add(i) };
-        let str_ptr = copy_from_user(addr).ok_or(SysError::EFAULT)?;
-        if str_ptr.is_null() {
-            break;
+    if user.is_null() {
+        Ok(Vec::new())
+    } else {
+        let mut buffer = Vec::new();
+        for i in 0.. {
+            let addr = unsafe { user.add(i) };
+            let str_ptr = copy_from_user(addr).ok_or(SysError::EFAULT)?;
+            if str_ptr.is_null() {
+                break;
+            }
+            let string = check_and_clone_cstr(str_ptr)?;
+            buffer.push(string);
         }
-        let string = check_and_clone_cstr(str_ptr)?;
-        buffer.push(string);
+        Ok(buffer)
     }
-    Ok(buffer)
 }

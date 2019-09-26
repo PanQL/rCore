@@ -4,8 +4,6 @@
 #   make justrun                Run the last build
 #   make runnet                 Build and run in QEMU with nic
 #   make justrunnet             Run the last build with nic
-#   make runui                  Build and run in QEMU with gui
-#   make justrunui              Run the last build with gui
 #   make runtest                Build and run in QEMU with specified program
 #   make justruntest            Run the last build with specified program
 #   make doc                    Generate docs
@@ -19,7 +17,7 @@
 #   d    = int | in_asm | ...   QEMU debug info
 #   mode = debug | release
 #   LOG  = off | error | warn | info | debug | trace
-#   SFSIMG = <sfsimg>            SFS image path of user programs
+#   USER_IMG = <sfsimg>          image path of user programs
 #   smp     = 1 | 2 | ...        SMP core number
 #   graphic = on | off | console Enable/disable qemu graphical output, or print console to graphic output
 #   board   = none               Running on QEMU
@@ -31,7 +29,6 @@
 #   pci_passthru = 0000:00:00.1  Only available on x86_64, passthrough the specified PCI device
 #   init = /bin/ls               Only available on riscv64, run specified program instead of user shell
 #   extra_nic = on | off         Only available on x86_64, add an additional e1000 nic
-#   u_boot = /path/to/u-boot.bin Only available on aarch64, use u-boot to boot rcore
 # . extra_features = profile | ... Add additional features
 
 arch ?= riscv64
@@ -48,31 +45,20 @@ target := $(arch)
 build_path := target/$(target)/$(mode)
 kernel := $(build_path)/rcore
 kernel_img := $(build_path)/kernel.img
-bootimage := $(build_path)/bootimage.bin
+ESP := $(build_path)/esp
+OVMF := ../rboot/OVMF.fd
 bootloader_dir = ../bootloader
 bootloader := $(bootloader_dir)/target/$(target)/$(mode)/rcore-bootloader
-bbl_path := $(PWD)/../riscv-pk
 user_dir := ../user
 
 
 ### export environments ###
 
-ifeq ($(arch), $(filter $(arch), aarch64 mipsel))
-#link user img, so use original image
-export SFSIMG = $(user_dir)/build/$(arch).img
-else
-# board is pc or qemu?
-ifeq ($(board), $(filter $(board), pc u540 k210 rocket_chip))
-#link user img, so use original image
-export SFSIMG = $(user_dir)/build/$(arch).img
-else
-export SFSIMG = $(user_dir)/build/$(arch).qcow2
-endif # pc or qemu
-endif # aarch64 mipsel
+export USER_IMG = $(user_dir)/build/$(arch).img
+export USER_QCOW2 = $(user_dir)/build/$(arch).qcow2
 
 ifeq ($(arch), aarch64)
 board := raspi3
-need_bootloader := true
 endif
 
 # currently only mipsel architecture and rocket-chip need DTB linked to the kernel
@@ -98,17 +84,17 @@ export DTB = $(dtb)
 qemu_opts := \
 	-smp cores=$(smp)
 qemu_net_opts :=
-qemu_ui_opts := 
 
 ifeq ($(arch), x86_64)
 qemu_opts += \
-	-drive format=raw,file=$(bootimage) \
+	-drive if=pflash,format=raw,file=$(OVMF),readonly=on \
+	-drive format=raw,file=fat:rw:$(ESP) \
 	-serial mon:stdio \
 	-m 4G \
 	-device isa-debug-exit
 ifeq ($(board), none)
 qemu_opts += \
-	-drive format=qcow2,file=$(SFSIMG),media=disk,cache=writeback,id=sfsimg,if=none \
+	-drive format=qcow2,file=$(USER_QCOW2),media=disk,cache=writeback,id=sfsimg,if=none \
 	-device ahci,id=ahci0 \
 	-device ide-drive,drive=sfsimg,bus=ahci0.0
 endif
@@ -136,14 +122,13 @@ qemu_opts += \
 	-serial mon:stdio \
 	-kernel ../tools/opensbi/virt_rv32.elf \
 	-device loader,addr=0x80400000,file=$(kernel_img) \
-	-drive file=$(SFSIMG),format=qcow2,id=sfs \
-	-device virtio-blk-device,drive=sfs
+	-drive file=$(USER_QCOW2),format=qcow2,id=sfs \
+	-device virtio-blk-device,drive=sfs \
+	-device virtio-gpu-device \
+	-device virtio-mouse-device
 qemu_net_opts += \
 	-netdev type=tap,id=net0,script=no,downscript=no \
 	-device virtio-net-device,netdev=net0
-qemu_ui_opts += \
-	-device virtio-gpu-device \
-	-device virtio-mouse-device
 
 else ifeq ($(arch), riscv64)
 ifeq ($(board), u540)
@@ -158,25 +143,21 @@ qemu_opts += \
 	-serial mon:stdio \
 	-kernel ../tools/opensbi/virt_rv64.elf \
 	-device loader,addr=0x80200000,file=$(kernel_img) \
-	-drive file=$(SFSIMG),format=qcow2,id=sfs \
-	-device virtio-blk-device,drive=sfs
+	-drive file=$(USER_QCOW2),format=qcow2,id=sfs \
+	-device virtio-blk-device,drive=sfs \
+	-device virtio-gpu-device \
+	-device virtio-mouse-device
 endif
 qemu_net_opts += \
 	-netdev type=tap,id=net0,script=no,downscript=no \
 	-device virtio-net-device,netdev=net0
-qemu_ui_opts += \
-	-device virtio-gpu-device \
-	-device virtio-mouse-device
 
 else ifeq ($(arch), aarch64)
 qemu_opts += \
 	-machine $(board) \
 	-serial null -serial mon:stdio \
-	-kernel $(kernel_img)
-ifneq ($(u_boot), )
-qemu_opts += \
-	-sd $(bootloader)
-endif
+	-kernel $(kernel_img) \
+	-drive file=$(USER_QCOW2),format=qcow2,id=sfs
 
 else ifeq ($(arch), mipsel)
 ifeq ($(board), malta)
@@ -238,19 +219,16 @@ endif
 ### prefix ###
 ifeq ($(arch), x86_64)
 ifeq ($(uname), Darwin)
-prefix := x86_64-elf-
+prefix := x86_64-linux-musl-
 endif
 else ifeq ($(arch), riscv32)
-prefix := riscv64-unknown-elf-
+prefix := riscv64-linux-musl-
 else ifeq ($(arch), riscv64)
-prefix := riscv64-unknown-elf-
+prefix := riscv64-linux-musl-
 else ifeq ($(arch), mipsel)
 prefix ?= mipsel-linux-musln32-
 else ifeq ($(arch), aarch64)
-prefix ?= aarch64-none-elf-
-ifeq (,$(shell which $(prefix)ld))
-	prefix := aarch64-elf-
-endif
+prefix ?= aarch64-linux-musl-
 endif
 
 gdb := $(prefix)gdb
@@ -260,7 +238,7 @@ strip := cargo strip --
 dtc := dtc
 hostcc := gcc
 
-.PHONY: all clean build asm doc debug kernel sfsimg install run justrun runnet justrunnet runui justrunui runtest justruntest
+.PHONY: all clean build asm doc debug kernel sfsimg install run justrun runnet justrunnet runtest justruntest
 
 all: kernel
 
@@ -274,7 +252,6 @@ doc:
 
 run: build justrun
 runnet: build justrunnet
-runui: build justrunui
 runtest: build justruntest
 
 justrun:
@@ -282,9 +259,6 @@ justrun:
 
 justrunnet: build
 	@sudo qemu-system-$(arch) $(qemu_opts) $(qemu_net_opts)
-
-justrunui: build
-	@qemu-system-$(arch) $(qemu_opts) $(qemu_ui_opts)
 
 justruntest: build
 	@qemu-system-$(arch) $(filter-out -serial mon:stdio, $(qemu_opts)) --append $(init) -serial file:../tests/stdout -monitor null
@@ -314,23 +288,29 @@ sym:
 
 ### bootloader and kernel image ###
 
-$(bootloader): $(kernel)
-ifeq ($(need_bootloader), true)
+bootloader: $(kernel)
+ifeq ($(arch), x86_64)
+	@cd ../rboot && make build
+endif
+ifeq ($(arch), aarch64)
+	@echo "Patching symbols into kernel."
+	@../tools/fill_symbols/aarch64.sh target/aarch64/$(mode)/rcore $(prefix)
 	@echo Building $(arch) bootloader
 	@$(strip) $(kernel) -o $(kernel)_stripped
 	@cd $(bootloader_dir) && make arch=$(arch) mode=$(mode) payload=../kernel/$(kernel)_stripped
 	@rm $(kernel)_stripped
 endif
 
-$(kernel_img): kernel $(bootloader)
-ifeq ($(arch), $(filter $(arch), riscv32 riscv64))
+$(kernel_img): kernel bootloader
+ifeq ($(arch), x86_64)
+	@mkdir -p $(ESP)/EFI/rCore $(ESP)/EFI/Boot
+	@cp ../rboot/target/x86_64-unknown-uefi/release/rboot.efi $(ESP)/EFI/Boot/BootX64.efi
+	@cp ../rboot/rboot.conf $(ESP)/EFI/Boot/rboot.conf
+	@cp $(kernel) $(ESP)/EFI/rCore/kernel.elf
+else ifeq ($(arch), $(filter $(arch), riscv32 riscv64))
 	@$(objcopy) $(kernel) --strip-all -O binary $@
 else ifeq ($(arch), aarch64)
-ifneq ($(u_boot), )
-	@cp $(u_boot) $@
-else
 	@$(objcopy) $(bootloader) --strip-all -O binary $@
-endif
 else ifeq ($(arch), mipsel)
 # qemu-system-mipsel accepts ELF file only, so objcopy is not needed
 	@$(strip) $(kernel) -o $@
@@ -339,8 +319,9 @@ endif
 kernel: $(dtb)
 	@echo Building $(arch) kernel
 ifeq ($(arch), x86_64)
-	@bootimage build $(build_args)
-	@mv target/x86_64/bootimage.bin $(bootimage)
+	@cargo xbuild $(build_args)
+	@echo "Now patching kernel symbols onto kernel."
+	@../tools/fill_symbols/x86_64.sh target/x86_64/$(mode)/rcore
 else ifeq ($(arch), $(filter $(arch), riscv32 riscv64))
 ifeq ($(board), k210)
 	@cp src/arch/riscv32/board/k210/linker.ld src/arch/riscv32/boot/linker64.ld

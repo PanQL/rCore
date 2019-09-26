@@ -3,7 +3,7 @@ use core::fmt;
 
 use core::str;
 use log::*;
-use rcore_memory::PAGE_SIZE;
+use rcore_memory::{Page, PAGE_SIZE};
 use rcore_thread::Tid;
 use spin::RwLock;
 use xmas_elf::{
@@ -84,7 +84,7 @@ lazy_static! {
 
 /// Let `rcore_thread` can switch between our `Thread`
 impl rcore_thread::Context for Thread {
-    unsafe fn switch_to(&mut self, target: &mut rcore_thread::Context) {
+    unsafe fn switch_to(&mut self, target: &mut dyn rcore_thread::Context) {
         use core::mem::transmute;
         let (target, _): (&mut Thread, *const ()) = transmute(target);
         self.context.switch(&mut target.context);
@@ -103,7 +103,7 @@ impl Thread {
         Box::new(Thread {
             context: Context::null(),
             // safety: other fields will never be used
-            ..core::mem::MaybeUninit::uninitialized().into_initialized()
+            ..core::mem::MaybeUninit::zeroed().assume_init()
         })
     }
 
@@ -139,14 +139,14 @@ impl Thread {
     /// Construct virtual memory of a new user process from ELF `data`.
     /// Return `(MemorySet, entry_point, ustack_top)`
     pub fn new_user_vm(
-        inode: &Arc<INode>,
+        inode: &Arc<dyn INode>,
         exec_path: &str,
         mut args: Vec<String>,
         envs: Vec<String>,
     ) -> Result<(MemorySet, usize, usize), &'static str> {
         // Read ELF header
         // 0x3c0: magic number from ld-musl.so
-        let mut data: [u8; 0x3c0] = unsafe { MaybeUninit::uninitialized().into_initialized() };
+        let mut data: [u8; 0x3c0] = unsafe { MaybeUninit::zeroed().assume_init() };
         inode
             .read_at(0, &mut data)
             .map_err(|_| "failed to read from INode")?;
@@ -174,22 +174,40 @@ impl Thread {
             _ => return Err("invalid ELF arch"),
         }
 
+        let mut auxv = {
+            let mut map = BTreeMap::new();
+            if let Some(phdr_vaddr) = elf.get_phdr_vaddr() {
+                map.insert(abi::AT_PHDR, phdr_vaddr as usize);
+            }
+            map.insert(abi::AT_PHENT, elf.header.pt2.ph_entry_size() as usize);
+            map.insert(abi::AT_PHNUM, elf.header.pt2.ph_count() as usize);
+            map.insert(abi::AT_PAGESZ, PAGE_SIZE);
+            map
+        };
+        let mut entry_addr = elf.header.pt2.entry_point() as usize;
+        // Make page table
+        let (mut vm, bias) = elf.make_memory_set(inode);
+
         // Check interpreter (for dynamic link)
+        // When interpreter is used, map both dynamic linker and executable
         if let Ok(loader_path) = elf.get_interpreter() {
+            info!("Handling interpreter... offset={:x}", bias);
             // assuming absolute path
-            let inode = crate::fs::ROOT_INODE
+            let interp_inode = crate::fs::ROOT_INODE
                 .lookup_follow(loader_path, FOLLOW_MAX_DEPTH)
                 .map_err(|_| "interpreter not found")?;
-            // modify args for loader
-            args[0] = exec_path.into();
-            args.insert(0, loader_path.into());
-            // Elf loader should not have INTERP
-            // No infinite loop
-            return Thread::new_user_vm(&inode, exec_path, args, envs);
+            // load loader by bias and set aux vector.
+            let mut interp_data: [u8; 0x3c0] = unsafe { MaybeUninit::zeroed().assume_init() };
+            interp_inode
+                .read_at(0, &mut interp_data)
+                .map_err(|_| "failed to read from INode")?;
+            let elf_interp = ElfFile::new(&interp_data)?;
+            elf_interp.append_as_interpreter(&interp_inode, &mut vm, bias);
+            debug!("entry point: {:x}", elf.header.pt2.entry_point() as usize);
+            auxv.insert(abi::AT_ENTRY, elf.header.pt2.entry_point() as usize);
+            auxv.insert(abi::AT_BASE, bias);
+            entry_addr = elf_interp.header.pt2.entry_point() as usize + bias;
         }
-
-        // Make page table
-        let mut vm = elf.make_memory_set(inode);
 
         // User stack
         use crate::consts::{USER_STACK_OFFSET, USER_STACK_SIZE};
@@ -215,33 +233,17 @@ impl Thread {
         };
 
         // Make init info
-        let init_info = ProcInitInfo {
-            args,
-            envs,
-            auxv: {
-                let mut map = BTreeMap::new();
-                if let Some(phdr_vaddr) = elf.get_phdr_vaddr() {
-                    map.insert(abi::AT_PHDR, phdr_vaddr as usize);
-                }
-                map.insert(abi::AT_PHENT, elf.header.pt2.ph_entry_size() as usize);
-                map.insert(abi::AT_PHNUM, elf.header.pt2.ph_count() as usize);
-                map.insert(abi::AT_PAGESZ, PAGE_SIZE);
-                map
-            },
-        };
+        let init_info = ProcInitInfo { args, envs, auxv };
         unsafe {
             vm.with(|| ustack_top = init_info.push_at(ustack_top));
         }
 
-        trace!("{:#x?}", vm);
-
-        let entry_addr = elf.header.pt2.entry_point() as usize;
         Ok((vm, entry_addr, ustack_top))
     }
 
     /// Make a new user process from ELF `data`
     pub fn new_user(
-        inode: &Arc<INode>,
+        inode: &Arc<dyn INode>,
         exec_path: &str,
         args: Vec<String>,
         envs: Vec<String>,
@@ -443,20 +445,29 @@ impl ToMemoryAttr for Flags {
 /// Helper functions to process ELF file
 trait ElfExt {
     /// Generate a MemorySet according to the ELF file.
-    fn make_memory_set(&self, inode: &Arc<INode>) -> MemorySet;
+    fn make_memory_set(&self, inode: &Arc<dyn INode>) -> (MemorySet, usize);
 
     /// Get interpreter string if it has.
     fn get_interpreter(&self) -> Result<&str, &str>;
+
+    /// Append current ELF file as interpreter into given memory set.
+    /// This will insert the interpreter it a place which is "good enough" (since ld.so should be PIC).
+    fn append_as_interpreter(
+        &self,
+        inode: &Arc<dyn INode>,
+        memory_set: &mut MemorySet,
+        bias: usize,
+    );
 
     /// Get virtual address of PHDR section if it has.
     fn get_phdr_vaddr(&self) -> Option<u64>;
 }
 
 impl ElfExt for ElfFile<'_> {
-    fn make_memory_set(&self, inode: &Arc<INode>) -> MemorySet {
+    fn make_memory_set(&self, inode: &Arc<dyn INode>) -> (MemorySet, usize) {
         debug!("creating MemorySet from ELF");
         let mut ms = MemorySet::new();
-
+        let mut farthest_memory: usize = 0;
         for ph in self.program_iter() {
             if ph.get_type() != Ok(Type::Load) {
                 continue;
@@ -474,10 +485,37 @@ impl ElfExt for ElfFile<'_> {
                 },
                 "elf",
             );
+            if ph.virtual_addr() as usize + ph.mem_size() as usize > farthest_memory {
+                farthest_memory = ph.virtual_addr() as usize + ph.mem_size() as usize;
+            }
         }
-        ms
+        (
+            ms,
+            (Page::of_addr(farthest_memory + PAGE_SIZE)).start_address(),
+        )
     }
+    fn append_as_interpreter(&self, inode: &Arc<dyn INode>, ms: &mut MemorySet, bias: usize) {
+        debug!("inserting interpreter from ELF");
 
+        for ph in self.program_iter() {
+            if ph.get_type() != Ok(Type::Load) {
+                continue;
+            }
+            ms.push(
+                ph.virtual_addr() as usize + bias,
+                ph.virtual_addr() as usize + ph.mem_size() as usize + bias,
+                ph.flags().to_attr(),
+                File {
+                    file: INodeForMap(inode.clone()),
+                    mem_start: ph.virtual_addr() as usize + bias,
+                    file_start: ph.offset() as usize,
+                    file_end: ph.offset() as usize + ph.file_size() as usize,
+                    allocator: GlobalFrameAlloc,
+                },
+                "elf-interp",
+            )
+        }
+    }
     fn get_interpreter(&self) -> Result<&str, &str> {
         let header = self
             .program_iter()
@@ -517,7 +555,7 @@ impl ElfExt for ElfFile<'_> {
 }
 
 #[derive(Clone)]
-pub struct INodeForMap(pub Arc<INode>);
+pub struct INodeForMap(pub Arc<dyn INode>);
 
 impl Read for INodeForMap {
     fn read_at(&self, offset: usize, buf: &mut [u8]) -> usize {

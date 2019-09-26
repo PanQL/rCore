@@ -1,5 +1,6 @@
 use crate::consts::PHYSICAL_MEMORY_OFFSET;
 use crate::memory::{alloc_frame, dealloc_frame, phys_to_virt};
+use core::mem::ManuallyDrop;
 use log::*;
 use rcore_memory::paging::*;
 use riscv::addr::*;
@@ -19,7 +20,7 @@ type TopLevelPageTable<'a> = riscv::paging::Rv39PageTable<'a>;
 pub struct PageTableImpl {
     page_table: TopLevelPageTable<'static>,
     root_frame: Frame,
-    entry: PageEntry,
+    entry: Option<PageEntry>,
 }
 
 /// PageTableEntry: the contents of this entry.
@@ -27,7 +28,7 @@ pub struct PageTableImpl {
 pub struct PageEntry(&'static mut PageTableEntry, Page);
 
 impl PageTable for PageTableImpl {
-    fn map(&mut self, addr: usize, target: usize) -> &mut Entry {
+    fn map(&mut self, addr: usize, target: usize) -> &mut dyn Entry {
         // map the 4K `page` to the 4K `frame` with `flags`
         let flags = EF::VALID | EF::READABLE | EF::WRITABLE;
         let page = Page::of_addr(VirtAddr::new(addr));
@@ -46,12 +47,12 @@ impl PageTable for PageTableImpl {
         flush.flush();
     }
 
-    fn get_entry(&mut self, vaddr: usize) -> Option<&mut Entry> {
+    fn get_entry(&mut self, vaddr: usize) -> Option<&mut dyn Entry> {
         let page = Page::of_addr(VirtAddr::new(vaddr));
         if let Ok(e) = self.page_table.ref_entry(page.clone()) {
             let e = unsafe { &mut *(e as *mut PageTableEntry) };
-            self.entry = PageEntry(e, page);
-            Some(&mut self.entry as &mut Entry)
+            self.entry = Some(PageEntry(e, page));
+            Some(self.entry.as_mut().unwrap())
         } else {
             None
         }
@@ -146,19 +147,24 @@ impl Entry for PageEntry {
 
 impl PageTableImpl {
     /// Unsafely get the current active page table.
-    /// WARN: You MUST call `core::mem::forget` for it after use!
-    pub unsafe fn active() -> Self {
+    /// Using ManuallyDrop to wrap the page table: this is how `core::mem::forget` is implemented now.
+    pub unsafe fn active() -> ManuallyDrop<Self> {
         #[cfg(target_arch = "riscv32")]
         let mask = 0x7fffffff;
         #[cfg(target_arch = "riscv64")]
         let mask = 0x0fffffff_ffffffff;
         let frame = Frame::of_ppn(PageTableImpl::active_token() & mask);
         let table = frame.as_kernel_mut(PHYSICAL_MEMORY_OFFSET);
-        PageTableImpl {
+        ManuallyDrop::new(PageTableImpl {
             page_table: TopLevelPageTable::new(table, PHYSICAL_MEMORY_OFFSET),
             root_frame: frame,
-            entry: unsafe { core::mem::MaybeUninit::uninitialized().into_initialized() },
-        }
+            entry: None,
+        })
+    }
+    /// The method for getting the kernel page table.
+    /// In riscv kernel page table and user page table are the same table. However you have to do the initialization.
+    pub unsafe fn kernel_table() -> ManuallyDrop<Self> {
+        Self::active()
     }
 }
 
@@ -173,7 +179,7 @@ impl PageTableExt for PageTableImpl {
         PageTableImpl {
             page_table: TopLevelPageTable::new(table, PHYSICAL_MEMORY_OFFSET),
             root_frame: frame,
-            entry: unsafe { core::mem::MaybeUninit::uninitialized().into_initialized() },
+            entry: None,
         }
     }
 
