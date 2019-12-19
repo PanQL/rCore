@@ -36,12 +36,3 @@ pub fn error(tf: &TrapFrame) -> ! {
     processor().yield_now();
     unreachable!();
 }
-
-pub fn serial(c: char) {
-    if c == '\r' {
-        // in linux, we use '\n' instead
-        // crate::fs::STDIN.push('\n');
-    } else {
-        // crate::fs::STDIN.push(c);
-    }
-}
