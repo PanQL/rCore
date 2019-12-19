@@ -19,7 +19,7 @@ pub fn init() {
         }
     }
 
-    crate::shell::add_user_shell();
+    crate::shell::add_simple_kernel_shell();
 
     info!("process: init end");
 }

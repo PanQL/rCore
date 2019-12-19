@@ -5,6 +5,10 @@ use crate::process::*;
 use alloc::string::String;
 use alloc::vec::Vec;
 
+pub fn add_simple_kernel_shell() {
+    processor().manager().add(Thread::new_kernel(shell, 0));
+}
+
 #[cfg(not(feature = "run_cmdline"))]
 pub fn add_user_shell() {
     // the busybox of alpine linux can not transfer env vars into child process
