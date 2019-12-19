@@ -66,7 +66,7 @@
 
 use super::consts::*;
 use super::TrapFrame;
-use crate::drivers::{DRIVERS, IRQ_MANAGER};
+// use crate::drivers::{DRIVERS, IRQ_MANAGER};
 use bitflags::*;
 use log::*;
 
@@ -91,15 +91,15 @@ pub extern "C" fn rust_trap(tf: &mut TrapFrame) {
             super::ack(irq); // must ack before switching
             match irq {
                 Timer => crate::trap::timer(),
-                Keyboard => keyboard(),
+                // Keyboard => keyboard(),
                 COM1 => com1(),
                 COM2 => com2(),
-                IDE => ide(),
+                // IDE => ide(),
                 _ => {
-                    if IRQ_MANAGER.read().try_handle_interrupt(Some(irq.into())) {
-                        debug!("driver processed interrupt");
-                        return;
-                    }
+                    // if IRQ_MANAGER.read().try_handle_interrupt(Some(irq.into())) {
+                    //     debug!("driver processed interrupt");
+                    //     return;
+                    // }
                     warn!("unhandled external IRQ number: {}", irq);
                 }
             }
@@ -160,28 +160,28 @@ fn page_fault(tf: &mut TrapFrame) {
     error(tf);
 }
 
-fn keyboard() {
-    use crate::arch::driver::keyboard;
-    use pc_keyboard::{DecodedKey, KeyCode};
-    trace!("\nInterupt: Keyboard");
-    if let Some(key) = keyboard::receive() {
-        match key {
-            DecodedKey::Unicode(c) => crate::trap::serial(c),
-            DecodedKey::RawKey(code) => {
-                let s = match code {
-                    KeyCode::ArrowUp => "\u{1b}[A",
-                    KeyCode::ArrowDown => "\u{1b}[B",
-                    KeyCode::ArrowRight => "\u{1b}[C",
-                    KeyCode::ArrowLeft => "\u{1b}[D",
-                    _ => "",
-                };
-                for c in s.chars() {
-                    crate::trap::serial(c);
-                }
-            }
-        }
-    }
-}
+// fn keyboard() {
+//     use crate::arch::driver::keyboard;
+//     use pc_keyboard::{DecodedKey, KeyCode};
+//     trace!("\nInterupt: Keyboard");
+//     if let Some(key) = keyboard::receive() {
+//         match key {
+//             DecodedKey::Unicode(c) => crate::trap::serial(c),
+//             DecodedKey::RawKey(code) => {
+//                 let s = match code {
+//                     KeyCode::ArrowUp => "\u{1b}[A",
+//                     KeyCode::ArrowDown => "\u{1b}[B",
+//                     KeyCode::ArrowRight => "\u{1b}[C",
+//                     KeyCode::ArrowLeft => "\u{1b}[D",
+//                     _ => "",
+//                 };
+//                 for c in s.chars() {
+//                     crate::trap::serial(c);
+//                 }
+//             }
+//         }
+//     }
+// }
 
 fn com1() {
     use crate::arch::driver::serial::*;
@@ -195,21 +195,21 @@ fn com2() {
     COM2.lock().receive();
 }
 
-fn ide() {
-    trace!("\nInterupt: IDE");
-}
+// fn ide() {
+//     trace!("\nInterupt: IDE");
+// }
 
 #[no_mangle]
 pub extern "C" fn syscall(tf: &mut TrapFrame) {
     trace!("\nInterupt: Syscall {:#x?}", tf.rax);
-    let ret = crate::syscall::syscall(tf.rax, [tf.rdi, tf.rsi, tf.rdx, tf.r10, tf.r8, tf.r9], tf);
-    tf.rax = ret as usize;
+    // let ret = crate::syscall::syscall(tf.rax, [tf.rdi, tf.rsi, tf.rdx, tf.r10, tf.r8, tf.r9], tf);
+    // tf.rax = ret as usize;
 }
 
 fn syscall32(tf: &mut TrapFrame) {
     trace!("\nInterupt: Syscall {:#x?}", tf.rax);
-    let ret = crate::syscall::syscall(tf.rax, [tf.rdx, tf.rcx, tf.rbx, tf.rdi, tf.rsi, 0], tf);
-    tf.rax = ret as usize;
+    // let ret = crate::syscall::syscall(tf.rax, [tf.rdx, tf.rcx, tf.rbx, tf.rdi, tf.rsi, 0], tf);
+    // tf.rax = ret as usize;
 }
 
 /// Support `syscall` instruction

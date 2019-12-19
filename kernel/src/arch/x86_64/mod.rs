@@ -3,7 +3,6 @@ use log::*;
 use rboot::BootInfo;
 
 pub mod acpi;
-pub mod board;
 pub mod consts;
 pub mod cpu;
 pub mod driver;
@@ -16,7 +15,6 @@ pub mod memory;
 pub mod paging;
 pub mod rand;
 pub mod syscall;
-pub mod timer;
 
 static AP_CAN_INIT: AtomicBool = AtomicBool::new(false);
 
@@ -36,7 +34,6 @@ pub extern "C" fn _start(boot_info: &'static BootInfo) -> ! {
     // init log, heap and graphic output
     crate::logging::init();
     crate::memory::init_heap();
-    driver::init_graphic(boot_info);
 
     // check BootInfo from bootloader
     info!("{:#x?}", boot_info);
@@ -46,7 +43,7 @@ pub extern "C" fn _start(boot_info: &'static BootInfo) -> ! {
     );
 
     // setup fast syscall in x86_64
-    interrupt::fast_syscall::init();
+    // interrupt::fast_syscall::init();
 
     // Init physical memory management
     memory::init(boot_info);
@@ -61,12 +58,6 @@ pub extern "C" fn _start(boot_info: &'static BootInfo) -> ! {
     memory::init_kernel_kseg2_map();
     // get local apic id of cpu
     cpu::init();
-    // now we can start LKM.
-    crate::lkm::manager::ModuleManager::init();
-    // Use IOAPIC instead of PIC, use APIC Timer instead of PIT, init serial&keyboard in x86_64
-    driver::init(boot_info);
-    // init pci/bus-based devices ,e.g. Intel 10Gb NIC, ...
-    crate::drivers::init();
     // init cpu scheduler and process manager, and add user shell app in process manager
     crate::process::init();
     // load acpi

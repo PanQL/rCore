@@ -159,20 +159,20 @@ impl Condvar {
     }
 
     fn epoll_callback(&self, thread: &Arc<Thread>) {
-        let epoll_list = self.epoll_queue.lock();
-        for ist in epoll_list.iter() {
-            if thread.id() == ist.tid {
-                let mut proc = ist.proc.lock();
-                match proc.get_epoll_instance(ist.epfd) {
-                    Ok(instacne) => {
-                        let mut readylist = instacne.readyList.lock();
-                        readylist.insert(ist.fd);
-                    }
-                    Err(r) => {
-                        panic!("epoll instance not exist");
-                    }
-                }
-            }
-        }
+        // let epoll_list = self.epoll_queue.lock();
+        // for ist in epoll_list.iter() {
+        //     if thread.id() == ist.tid {
+        //         let mut proc = ist.proc.lock();
+        //         match proc.get_epoll_instance(ist.epfd) {
+        //             Ok(instacne) => {
+        //                 let mut readylist = instacne.readyList.lock();
+        //                 readylist.insert(ist.fd);
+        //             }
+        //             Err(r) => {
+        //                 panic!("epoll instance not exist");
+        //             }
+        //         }
+        //     }
+        // }
     }
 }
